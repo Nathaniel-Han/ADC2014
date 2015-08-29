@@ -1,13 +1,13 @@
-//
+
 //  NN_RST.h
-//  RTreeTest
+//  ADC2014
 //
 //  Created by Yuxing Han on 8/25/15.
 //  Copyright (c) 2015 Yuxing Han. All rights reserved.
 //
 
-#ifndef RTreeTest_NN_RST_h
-#define RTreeTest_NN_RST_h
+#ifndef NN_RST_h
+#define NN_RST_h
 
 #include <boost/thread/thread.hpp>
 #include <boost/thread/condition.hpp>
@@ -18,6 +18,7 @@ using namespace SpatialIndex;
 extern SpatialIndex::ISpatialIndex* tree;
 extern boost::mutex io_mutex;
 extern boost::mutex bool_mutex;
+extern boost::mutex disk_mutex;
 extern bool continued;
 
 
@@ -34,10 +35,10 @@ public:
         
         if (qs.empty())
         {
-            {
-                scoped_lock lock(io_mutex);
-                cout << "thread (Get) : queue is EMPTY!!" <<endl;
-            }
+//            {
+//                scoped_lock lock(io_mutex);
+//                cout << "thread (Get) : queue is EMPTY!!" <<endl;
+//            }
             
             while (qs.empty())
             {
@@ -58,6 +59,9 @@ public:
         typedef RTree::RTree::NNEntry NNEntry;
         RTree::RTree::NNComparator nnc;
         
+#ifdef HAVE_PTHREAD_H
+//        Tools::LockGuard lock(&dynamic_cast<RTree::RTree*>(tree)->m_lock);
+#endif
         
         priority_queue<NNEntry*, std::vector<NNEntry*>, NNEntry::ascending> queue;
         queue.push(new NNEntry(dynamic_cast<RTree::RTree*>(tree)->m_rootID, 0, 0.0));
@@ -67,6 +71,7 @@ public:
             NNEntry* pFirst = queue.top();
             queue.pop();
             
+            scoped_lock lock(disk_mutex);
             if (pFirst->m_pEntry == 0)
             {
                 RTree::NodePtr n = dynamic_cast<RTree::RTree*>(tree)->readNode(pFirst->m_id);
@@ -86,14 +91,20 @@ public:
             {
                 // different placement of lock can achieve better efficiency 
                 scoped_lock lock(m_mutex);
-                if (qs.size() == 10)
+                if (qs.size() >= 100)
                 {
+//                    {
+//                        scoped_lock lock(io_mutex);
+//                        cout << "thread (Put): " << qs.size() << endl;
+//                    }
+                    while (qs.size() >= 100)
                     {
-                        scoped_lock lock(io_mutex);
-                        cout << "thread (Put): " << qs.size() << endl;
-                    }
-                    while (qs.size() == 10)
-                    {
+                        {
+                            scoped_lock lock(bool_mutex);
+                            if (!continued)
+                                break;
+                        }
+                        
                         cond.wait(lock);
                     }
                 }
@@ -107,7 +118,7 @@ public:
             delete pFirst;
             
             {
-//                scoped_lock lock(bool_mutex);
+                scoped_lock lock(bool_mutex);
                 if (!continued)
                     break;
             }

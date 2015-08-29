@@ -1,18 +1,20 @@
 //
 //  utility.h
-//  RTreeTest
+//  ADC2014
 //
 //  Created by Yuxing Han on 8/24/15.
 //  Copyright (c) 2015 Yuxing Han. All rights reserved.
 //
 
-#ifndef RTreeTest_utility_h
-#define RTreeTest_utility_h
+#ifndef utility_h
+#define utility_h
 
 #include <queue>
 #include <vector>
 #include <unordered_set>
+#include <unordered_map>
 #include <spatialindex/SpatialIndex.h>
+#include <spatialindex/tools/Tools.h>
 using namespace SpatialIndex;
 using namespace std;
 
@@ -167,9 +169,9 @@ public:
     size_t m_indexIO;
     size_t m_leafIO;
     int m_count;
-    
+    int m_id;
 public:
-    MyVisitor() : m_indexIO(0), m_leafIO(0), m_count(0) {}
+    MyVisitor(int id) : m_indexIO(0), m_leafIO(0), m_count(0), m_id(id) {}
     
     void visitNode(const INode& n)
     {
@@ -179,16 +181,31 @@ public:
     
     void visitData(const IData& d)
     {
-        cout << d.getIdentifier() << " ";
+        cout <<  m_id<< " : " <<d.getIdentifier() << " ";
         // the ID of this data entry is an answer to the query. I will just print it to stdout.
         m_count++;
     }
     
     void visitData(std::vector<const IData*>& v)
     {
-        cout << v[0]->getIdentifier() << " " << v[1]->getIdentifier() << endl;
+//        cout << v[0]->getIdentifier() << " " << v[1]->getIdentifier() << endl;
     }
 };
+
+class QEntry
+{
+public:
+    int q_id;
+    int t_id;
+    double time;
+    QEntry(int query_id, int traj_id, double reach_time): q_id(query_id), t_id(traj_id), time(reach_time) {}
+    ~QEntry(){}
+    
+    struct ascending : public std::binary_function<QEntry, QEntry, bool>
+    {
+        bool operator() (const QEntry __x, const QEntry __y) const {return __x.time > __y.time;}
+    };
+}; //QEntry
 
 
 #endif
