@@ -9,10 +9,14 @@
 #ifndef NN_RST_Driver_h
 #define NN_RST_Driver_h
 
-#include "config.h"
-#include "NN_RST.h"
-#include <iostream>
+#ifdef DEBUG_TEST
 
+#include "config.h"
+#include "global_value.h"
+#include "NN_RST.h"
+
+
+// NN_RST Multi-Threads Test
 class NN_RST_Driver
 {
 public:
@@ -101,5 +105,7 @@ private:
     
 
 };
+
+#endif
 
 #endif

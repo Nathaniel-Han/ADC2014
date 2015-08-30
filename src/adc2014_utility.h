@@ -22,6 +22,22 @@ class Taxi_Point;
 extern unordered_map<id_type, double> enhanced_mbr;
 extern vector<Taxi_Point> point_set;
 
+//Entry in the Q maintained by the main thread
+class QEntry
+{
+public:
+    int q_id;
+    int t_id;
+    double time;
+    QEntry(int query_id, int traj_id, double reach_time): q_id(query_id), t_id(traj_id), time(reach_time) {}
+    ~QEntry(){}
+    
+    struct ascending : public std::binary_function<QEntry, QEntry, bool>
+    {
+        bool operator() (const QEntry __x, const QEntry __y) const {return __x.time > __y.time;}
+    };
+}; //QEntry
+
 class Taxi_Point : public Point
 {
 public:
@@ -41,11 +57,11 @@ public:
     long m_id;
     long traj_id;
     double m_speed;
-};
+}; //Taxi_Point
 
 
 //traverse the RTree in DFS manner
-
+//Operation on 'MBR' level by level
 class LevelStrategy : public SpatialIndex::IQueryStrategy
 {
 private:
@@ -119,8 +135,10 @@ public:
         }
         
     }
-};
+}; // LevelStrategy
 
+#ifdef DEBUG_TEST
+// Check if LevelStrategy work correctly
 class CheckStrategy : public SpatialIndex::IQueryStrategy
 {
 private:
@@ -161,7 +179,7 @@ public:
         }
         
     }
-};
+}; //CheckStrategy
 
 class MyVisitor : public IVisitor
 {
@@ -190,22 +208,11 @@ public:
     {
 //        cout << v[0]->getIdentifier() << " " << v[1]->getIdentifier() << endl;
     }
-};
+}; //MyVisitor
+#endif
 
-class QEntry
-{
-public:
-    int q_id;
-    int t_id;
-    double time;
-    QEntry(int query_id, int traj_id, double reach_time): q_id(query_id), t_id(traj_id), time(reach_time) {}
-    ~QEntry(){}
-    
-    struct ascending : public std::binary_function<QEntry, QEntry, bool>
-    {
-        bool operator() (const QEntry __x, const QEntry __y) const {return __x.time > __y.time;}
-    };
-}; //QEntry
+
+
 
 
 #endif

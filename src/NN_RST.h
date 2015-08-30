@@ -21,8 +21,7 @@ extern boost::mutex bool_mutex;
 extern boost::mutex disk_mutex;
 extern bool continued;
 
-
-//maintain result of a certain query point 
+//Maintain Incremental NN Result of a certain query point
 class NN_RST
 {
 public:
@@ -52,19 +51,14 @@ public:
     }
     
     
-    // After While loop is done, this procedure will produce all the point in the ascending order.
-    // Of Course, We don't want to see this when the data is very large.
-    void Put()
+  
+    void Put(RTree::RTree* tree)
     {
         typedef RTree::RTree::NNEntry NNEntry;
         RTree::RTree::NNComparator nnc;
         
-#ifdef HAVE_PTHREAD_H
-//        Tools::LockGuard lock(&dynamic_cast<RTree::RTree*>(tree)->m_lock);
-#endif
-        
         priority_queue<NNEntry*, std::vector<NNEntry*>, NNEntry::ascending> queue;
-        queue.push(new NNEntry(dynamic_cast<RTree::RTree*>(tree)->m_rootID, 0, 0.0));
+        queue.push(new NNEntry(tree->m_rootID, 0, 0.0));
         
         double knearest = 0.0;
         while (! queue.empty()) {
@@ -74,7 +68,7 @@ public:
             scoped_lock lock(disk_mutex);
             if (pFirst->m_pEntry == 0)
             {
-                RTree::NodePtr n = dynamic_cast<RTree::RTree*>(tree)->readNode(pFirst->m_id);
+                RTree::NodePtr n = tree->readNode(pFirst->m_id);
                 
                 for (uint32_t cChild=0; cChild < n->m_children; ++cChild) {
                     if (n->m_level == 0) {
@@ -102,7 +96,7 @@ public:
                         {
                             scoped_lock lock(bool_mutex);
                             if (!continued)
-                                break;
+                                goto EXIT;
                         }
                         
                         cond.wait(lock);
@@ -120,9 +114,11 @@ public:
             {
                 scoped_lock lock(bool_mutex);
                 if (!continued)
-                    break;
+                    goto EXIT;
             }
         }
+
+    EXIT:
         
         while (! queue.empty())
         {
